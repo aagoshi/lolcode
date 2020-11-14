@@ -1,0 +1,33 @@
+<program> ::= HAI <linebreak><statement><linebreak> KTHXBYE
+<statement> ::= <statement><statement><linebreak> | <expression> | <switchcase> | <ifthen> | <varcall> | <print> | <input>
+<input> ::= GIMMEH <variable>
+<print> ::= VISIBLE <variable> | VISIBLE <expression> | VISIBLE <literal>
+<varcall> ::= I HAS A <variable> | I HAS A <variable> ITZ <literal> | I HAS A <variable> ITZ <expression>  
+<!--walang variable initilization?-->
+<ifthen> ::= <expression><linebreak>O RLY?<linebreak> YA RLY<linebreak><statement> NO WAI<linebreak><statement> OIC
+<switch> ::= WTF? <linebreak><omgclause> OIC| WTF? <linebreak><omgclause> OMGWTF <linebreak><statement> OIC
+<omgclause> ::= OMG <literal><linebreak><statement> | <omgclause><omgclause>
+<expression> ::=  <comparison> | <arithmetic> | <boolean> | <concat> | <assignment>
+<assignment> ::= <variable> R <literal> | <variable> R <variable> | <variable> R <expression>
+<concat> ::= SMOOSH <anclause>
+<arithmetic> ::= SUM OF <arithmetic> <litvar> AN <litvar> | DIFF OF <arithmetic> <litvar> AN <litvar> | PRODUKT OF <arithmetic> <litvar> AN <litvar> | QUOSHUNT OF <arithmetic> <litvar> AN <litvar> | MOD OF <arithmetic> <litvar> AN <litvar> | BIGGR OF <arithmetic> <litvar> AN <litvar> | SMALLR OF <arithmetic> <litvar> AN <litvar> | SUM OF <litvar> AN <litvar> | DIFF OF <litvar> AN <litvar> | PRODUKT OF <litvar> AN <litvar> | QUOSHUNT OF <litvar> AN <litvar> | MOD OF <litvar> AN <litvar> | BIGGR OF <litvar> AN <litvar> | SMALLR OF <litvar> AN <litvar>
+<boolean> ::= BOTH OF <litvar> AN <litvar> | EITHER OF <litvar> AN <litvar> | WON OF <litvar> AN <litvar> | NOT <litvar> | ALL OF <boolean> AN <boolean> ...MKAY | ALL OF <litvar> AN <litvar> ...MKAY | ANY OF <booleanclause> ...MKAY | ANY OF <litvar> AN <litvar> ...MKAY 
+<comparison> ::= BOTH SAEM <litvar> AN <litvar> | DIFFRINT <litvar> AN <litvar> | BOTH SAEM <x> AN BIGGR OF <x> AN <litvar> | BOTH SAEM <x> AN SMALLR OF <x> AN <litvar> | DIFFRINT <x> AN BIGGR OF <x> AN <litvar> | DIFFRINT <x> AN SMALLR OF <x> AN <litvar>
+<!-- di ko alam paano sasabihin na same ang x at x-->
+<anclause> ::= <literal> AN <literal> | <anclause><anclause>
+<booleanclause> ::= <boolean> AN <boolean> | <boolean><boolean> AN <boolean><boolean>
+<litvar> ::= <literal> | <variable>
+<literal> ::= <numbr> | <numbar> | <yarn> |<troof>
+<troof> ::= WIN | FAIL
+
+<!--
+variable => variable identifier
+litvar => ginroup lang ang literals and variables
+TERMINAL CASES
+<variable>
+<numbr>
+<numbar>
+<yarn>
+WIN
+FAIL
+-->
