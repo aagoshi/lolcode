@@ -4,6 +4,7 @@ This program creates the initial GUI and lexical analyzer for lolcode interprete
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
+import copy
 import re
 
 class Token():
@@ -67,18 +68,18 @@ class Interpreter():
 		self.lexemeLbl = Label(self.tokenFrame, bg = "white",text = "LEXEMES", width = 40)
 		self.lexemeLbl.grid(row = 0, column = 0,padx = 5)
 		#Row2 - scrollable lexeme table - uses Treeview
-		self.lexemeTable = ttk.Treeview(self.tokenFrame, selectmode ='extend')
-		self.lexemeTable.grid(row = 1, column = 0)
-		self.lexemeTable["columns"] = ("1", "2") 
-		self.lexemeTable["show"] = "headings"
-		self.lexemeTable.column("1", width=150)
-		self.lexemeTable.column("2",  width=150)
-		self.lexemeTable.heading("1", text ="Lexeme") 
-		self.lexemeTable.heading("2", text ="Classification") 
+		self.lexemeTableGUI = ttk.Treeview(self.tokenFrame, selectmode ='extend')
+		self.lexemeTableGUI.grid(row = 1, column = 0)
+		self.lexemeTableGUI["columns"] = ("1", "2") 
+		self.lexemeTableGUI["show"] = "headings"
+		self.lexemeTableGUI.column("1", width=150)
+		self.lexemeTableGUI.column("2",  width=150)
+		self.lexemeTableGUI.heading("1", text ="Lexeme") 
+		self.lexemeTableGUI.heading("2", text ="Classification") 
 		#scroll bar on right of canvas
-		self.lexemeScroll = Scrollbar( self.tokenFrame, orient = "vertical", command = self.lexemeTable.yview)
+		self.lexemeScroll = Scrollbar( self.tokenFrame, orient = "vertical", command = self.lexemeTableGUI.yview)
 		self.lexemeScroll.grid(row = 1, column = 1, sticky = "NS")
-		self.lexemeTable.configure(yscrollcommand = self.lexemeScroll.set)
+		self.lexemeTableGUI.configure(yscrollcommand = self.lexemeScroll.set)
 
 	def init_symbolframe(self):
 		self.symbolFrame = Frame(self.frametop, bg = "white", width =100, height = self.frametop.winfo_screenheight()*0.4)
@@ -88,18 +89,18 @@ class Interpreter():
 		self.symbolLbl = Label(self.symbolFrame, bg = "white",text = "SYMBOL TABLE", width = 40)
 		self.symbolLbl.grid(row = 0, column = 0,padx = 5)
 		#Row2 - scrollable lexeme table - uses Treeview
-		self.symbolTable = ttk.Treeview(self.symbolFrame, selectmode ='extend')
-		self.symbolTable.grid(row = 1, column = 0)
-		self.symbolTable["columns"] = ("symb1", "symb2") 
-		self.symbolTable["show"] = "headings"
-		self.symbolTable.column("symb1", width=150)
-		self.symbolTable.column("symb2",  width=150)
-		self.symbolTable.heading("symb1", text ="Identifier") 
-		self.symbolTable.heading("symb2", text ="Value") 
+		self.symbolTableGUI = ttk.Treeview(self.symbolFrame, selectmode ='extend')
+		self.symbolTableGUI.grid(row = 1, column = 0)
+		self.symbolTableGUI["columns"] = ("symb1", "symb2") 
+		self.symbolTableGUI["show"] = "headings"
+		self.symbolTableGUI.column("symb1", width=150)
+		self.symbolTableGUI.column("symb2",  width=150)
+		self.symbolTableGUI.heading("symb1", text ="Identifier") 
+		self.symbolTableGUI.heading("symb2", text ="Value") 
 		#scroll bar on right of canvas
-		self.symbolScroll = Scrollbar( self.symbolFrame, orient = "vertical", command = self.symbolTable.yview)
+		self.symbolScroll = Scrollbar( self.symbolFrame, orient = "vertical", command = self.symbolTableGUI.yview)
 		self.symbolScroll.grid(row = 1, column = 1, sticky = "NS")
-		self.symbolTable.configure(yscrollcommand = self.symbolScroll.set)
+		self.symbolTableGUI.configure(yscrollcommand = self.symbolScroll.set)
 
 	#after button is clicked, open file, print text to codeBox, start lexical analysis and populating symbol table
 	def open_file(self):
@@ -115,7 +116,8 @@ class Interpreter():
 		# lexemes = [["HAI", "Code Delimiter"],["I HAS A", "variable Declaration"], ["12", "Literal"]] #sample lexeme table to test printing
 		self.fill_lexTable(lexemes)
 
-		#UPDATE SYMBOL TABLE
+		#UPDATE SYMBOL TABLE 
+		self.update_symbolTable(tokens)
 
 
 
@@ -123,7 +125,13 @@ class Interpreter():
 	#populate the lexeme table with identified lexemes
 	def fill_lexTable(self, lexemes):
 		for i in range(len(lexemes)):
-			self.lexemeTable.insert(parent='', index='end', iid=i, text="", values=(lexemes[i][0], lexemes[i][1]))
+			self.lexemeTableGUI.insert(parent='', index='end', iid=i, text="", values=(lexemes[i][0], lexemes[i][1]))
+
+	def update_symbolTable(self,symbols):
+		self.symbolTable = copy.deepcopy(symbols)
+		for i in range(len(self.symbolTable)):
+			self.symbolTableGUI.insert(parent='', index='end', iid=i, text="", values=(self.symbolTable[i].tok, self.symbolTable[i].type))
+
 
 	def read_file(self, filename):
 		#Every new read clear contents of previous widgets
