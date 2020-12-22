@@ -116,6 +116,7 @@ class Interpreter():
 		# lexemes = [["HAI", "Code Delimiter"],["I HAS A", "variable Declaration"], ["12", "Literal"]] #sample lexeme table to test printing
 		self.fill_lexTable(lexemes)
 
+		print(tokens)
 		#UPDATE SYMBOL TABLE 
 		self.update_symbolTable(tokens)
 

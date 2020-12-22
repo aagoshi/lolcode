@@ -1,0 +1,33 @@
+GIMMEH
+VISIBLE
+I HAS A
+ITZ
+-
+R
+ARITHMETIC
+COMPARISON
+BOOLEAN
+-
+YA RLY
+NO WAI
+-
+OMG
+OMGWTF
+GTFO
+
+<program> := HAI <statement> KTHXBYE
+<statement> := <expression> | <switch> | <ifthen> | <varcall> | <print> | <input> | <statement> <statement>
+<print> := VISIBLE varident | VISIBLE <exp> | VISIBLE <literal>
+<varcall> := I HAS A varident | I HAS A varident ITZ <literal> | I HAS A varident ITZ <exp>
+<expression> := <comparisonop> | <arithmeticop> | <booleanop> | <assignmentop>
+<arithmeticop> := SUM OF <litvar> AN <litvar> | DIFF OF <litvar> AN <litvar> | PRODUKT OF <litvar> AN <litvar> | QUOSHUNT OF <litvar> AN <litvar> | MOD OF <litvar> AN <litvar> | BIGGR OF <litvar> AN <litvar> | SMALLR OF <litvar> AN <litvar>
+<booleanop>::= BOTH OF <litvar> AN <litvar> | EITHER OF <litvar> AN <litvar> | WON OF <litvar> AN <litvar> | NOT <litvar> | ALL OF <boolean> AN <boolean> ...MKAY | ALL OF <litvar> AN <litvar> ...MKAY | ANY OF <booleanclause> ...MKAY | ANY OF <litvar> AN <litvar> ...MKAY
+<comparisonop> ::= BOTH SAEM <litvar> AN <litvar> | DIFFRINT <litvar> AN <litvar> | BOTH SAEM <litvar> AN BIGGR OF <litvar> AN <litvar> | BOTH SAEM <litvar> AN SMALLR OF <litvar> AN <litvar> | DIFFRINT <litvar> AN BIGGR OF <litvar> AN <litvar> | DIFFRINT <litvar> AN SMALLR OF <litvar> AN <litvar>
+<input> ::= GIMMEH varident
+<assignment> ::= varident R <literal> | varident R varident | varident R <expression>
+<ifthen>::= <expression><linebreak>O RLY?<linebreak> YA RLY<linebreak><statement><linebreak> NO WAI<linebreak><statement><linebreak> OIC
+<booleanclause> := <boolean> AN <boolean>
+<omgclause> ::= OMG <literal><linebreak><statement> | <omgclause><omgclause>
+<litvar> ::= <literal> | varident
+<literal> ::= numbr | numbar | yarn | <troof>
+<troof> ::= WIN | FAIL

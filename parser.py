@@ -15,10 +15,35 @@ class Token():
 		self.col = col 			  
 		self.value = None             #no value yet
 
+class Statement():
+	def __init__(self, tokens, ttype):
+		self.tokens = tokens              #list of Tokens in that statement
+		self.type = ttype                 #type of the statement:
+		self.valueTable = []			  #wala pa use pero baka pwede para pagnaguupdate ng symbol Table?
+
+	def appendTok(self, tok):
+		self.tokens.append(tok) 		  #appends to Statement's tokens list
+
+	def decode(self):					#parang semantic analyzer ng per statement # di ko sure kung mas tama siya ilagay dito o sa semantic analyzer na lang
+		if self.type == "<PRINT>":			
+			print("Successfully decoded print")
+			if self.tokens[2].type == "String_Literal":	#expected combination ["VISIBLE",'"', StringLiteralToken, '"']
+				#do whatever printing is supposed to do #DUMMY OUTPUT
+				print("THIS IS A DUMMY OUTPUT IN PRINT STATEMENT WITH VALUE OF :" + self.tokens[2].tok )
+		elif self.type == "<OUTPUT>":
+			print("THIS IS A DUMMY OUTPUT IN OUTPUT STATEMENT WITH VALUE OF :" + self.tokens[1].tok ) #DUMMY OUTPUT
+
+
 class Syntax_Analyzer():
 	def __init__(self, tokens):
-		self.tokens = tokens
-		self.lineno = 1 	#current line number
+		self.tokens = tokens         	#tokens list
+		self.tokindex = 0 	            #current token index
+		self.parsetree = None			#[STATEMENT1, STATEMENT2, STATEMENT3] will look like this
+		self.program()
+
+	#forward to next index in self.tokens 
+	def next(self):
+		self.tokindex = self.tokindex + 1
 
 	#where main syntax analysis is done
 	def parse(self):
@@ -26,13 +51,49 @@ class Syntax_Analyzer():
 
 	#or dapat ba line per line ng token na nakaloop?? instead na per function??
 	def program(self): # <program>	::=	HAI <linebreak> <statement> <linebreak> KTHXBYE
-		if tokens[0][0].tok == "HAI" and tokens[-1][-1] == "KTHXBYE": #something like this though di ko sure kung tama na pagsabayin o line per line dapat
+		if self.tokens[0].tok == "HAI":
+			if self.tokens[-1].tok == "KTHXBYE": #something like this though di ko sure kung tama na pagsabayin o line per line dapat
+				print(str(self.tokindex) + " ")	 #checking lang kung nasaang index na
+				self.parsetree = []				 #initialize parse tree tells that a program has started
+				self.next() #because this is the first statement move to index 1
+				self.statement()
+			else: print("SYNTAX ERROR: KTHXBYE expected on line " + str(self.tokens[-1].row)) #di ko sure kunt tama icheck agad kthxbye baka skip muna ito
+		else: print("SYNTAX ERROR: HAI expected on line " + str(self.tokens[0].row))
+
+	def statement(self): #<statement> ::= <statement><linebreak><statement> | <expression> | <switchcase> | <ifthen> | <varcall> | <print> | <input> 
+		print(str(self.tokindex) + " ")
+		if self.tokens[self.tokindex].type == "Output_Keyword": #for VISIBLE/ <print> case
+			self.parsetree.append(Statement([self.tokens[self.tokindex]], "<PRINT>"))
+			self.next()
+			self.print()
+		elif self.tokens[self.tokindex].type == "Accept_Keyword": #for GIMMEH/ <input> case
+			self.parsetree.append(Statement([self.tokens[self.tokindex]], "<INPUT>"))
+			self.next()
+			self.input()
+
+	def print(self):
+		print(str(self.tokindex) + " ")
+		if self.tokens[self.tokindex].type == "String_Delimiter": #for string literal case #Statement.tokens will look like this: ["VISIBLE",'"', StringLiteralToken, '"'] 
+			self.parsetree[-1].appendTok(self.tokens[self.tokindex]) 		#calls the statement method appendTok and adds tokens to the Tokens list of the most recent statement
+			self.next()
+			self.next() #move 2 indeces
+			if self.tokens[self.tokindex].type == "String_Delimiter":
+				self.parsetree[-1].appendTok(self.tokens[self.tokindex-1])    #adds the end string delimiter
+				self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds string literal
+				print(str(self.tokindex) + " ")
+				print(print(self.tokens[self.tokindex-1].tok)) #print the middle item
+				self.next()
+				self.statement()							   #back to self.statement to check if there are more statements /recursively call it again
+			else: print("SYNTAX ERROR: String Delimiter expected on line " + str(self.tokens[self.tokindex].row))
+
+	def input(self):
+		print(str(self.tokindex) + " ")
+		if self.tokens[self.tokindex].type == "Identifier":		#if type is an identifier
+			self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
+			print(str(self.tokindex) + " ")
+			self.next()
 			self.statement()
-		else: print("SYNTAX ERROR: Invalid Code Delimiter on line ")
-
-	def statement(self): #<statement> ::= <statement><linebreak><statement> | <expression> | <switchcase> | <ifthen> | <varcall> | <print> | <input> | <comments>
-		pass
-
+		else: print("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))
 
 
 class Interpreter():
@@ -133,12 +194,26 @@ class Interpreter():
 		#reformats tokens in lexemes list for printing in lexemeTable
 		for i in range(0,len(tokens)):
 			lexemes.append([tokens[i].tok, tokens[i].type])
+			print("  " + str(tokens[i].row) + " " + str(tokens[i].tok) )
 		# lexemes = [["HAI", "Code Delimiter"],["I HAS A", "variable Declaration"], ["12", "Literal"]] #sample lexeme table to test printing
 		self.fill_lexTable(lexemes)
 
 		#UPDATE SYMBOL TABLE 
 		self.update_symbolTable(tokens)
 
+		#SYNTAX ANALYSIS
+		syntax = Syntax_Analyzer(tokens) 
+		#checking contents of parse tree
+		for statement in syntax.parsetree:
+			print("Statement: " + str(statement.type) + " ")
+			for token in statement.tokens:  #print token in tokens
+				print("\t" + str(token.tok))
+
+		#ATTEMPTING DUMMY SEMANTIC ANALYZER
+		for statement in syntax.parsetree:
+			print("Statement: " + str(statement.type) + " ")
+			statement.decode()
+			#update symbol table?? 
 
 
 
@@ -219,12 +294,13 @@ class Interpreter():
 			token_type = m.lastgroup
 			token_lexeme = m.group(token_type)
 
-			if token_type == 'TLDRComment':	#ends ignored multiline comments
-				self.line_num += 1 #di ako sure sa line number kung tama count
+			if token_type == 'Newline':  		#skips newline
+				line_start = m.end()
+				self.line_num += 1
+			elif token_type == 'TLDRComment':	#ends ignored multiline comments
 				multilineFlag = False
 				continue
 			elif token_type == 'OBTWComment':	#starts ignored multiline comments
-				self.line_num += 1
 				multilineFlag = True
 				continue
 			elif (token_type == 'Comment') or (multilineFlag == True): #skip comments
@@ -235,9 +311,6 @@ class Interpreter():
 				tokens.append(Token('"', "String_Delimiter", self.line_num, col))
 				tokens.append(Token(token_lexeme, "String_Literal", self.line_num, col))
 				tokens.append(Token('"', "String_Delimiter", self.line_num, col))
-			elif token_type == 'Newline':  		#skips newline
-				line_start = m.end()
-				self.line_num += 1
 			elif token_type == 'Skip':			#skips spaces
 			    continue
 			elif token_type == 'Error':			#shows error
@@ -263,9 +336,6 @@ https://users.tricity.wsu.edu/~bobl/cpts481/tkinter_nmt.pdf
 https://www.thegeekstuff.com/2014/07/advanced-python-regex/
 '''
 ''''
-Note: Halos complete na itong GUI. gumawa na rin ako ng pamprint sa table para focus ka lang sa analyzer. I think pareho lang siya ng ginawa sa Rust 2 exer
-Di ko pa inaayos ang fonts and colors if gusto mo iedit g lang
-TO DO: Lexical analyzer and updating symbol table.
-Huwag mo na problemahin muna ang scrolling, ako na siguro dun baka makakuha lang siya ng time mo
+TO DO: Syntax Analyzer and updating symbol table.
 '''
 
