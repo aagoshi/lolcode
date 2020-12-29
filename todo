@@ -1,17 +1,17 @@
 VISIBLE
-	[] literal
-	[] variable
-	[] expression
+	[/] literal
+	[/] variable
+	[/] expression
 I HAS A 
 ITZ 
 	[/] literal
 	[/] variable
-	[] expression
+	[/] expression
 -
 R 
 	[/] literal
 	[/] variable
-	[] expression
+	[/] expression
 ARITHMETIC
 	[/] SUM OF
 	[/] DIFF OF
@@ -20,7 +20,7 @@ ARITHMETIC
 	[/] MOD OF
 	[/] BIGGR OF
 	[/] SMALLR OF
-	[] PEMDAS
+	[/] PEMDAS
 COMPARISON
 	[/] BOTH SAEM
 	[/] DIFFRINT
@@ -35,6 +35,8 @@ BOOLEAN
 	[/] NOT
 	[/] ALL OF MKAY
 	[/] ANY OF MKAY
+	[] Compound Expressions
+	[] variables
 -
 YA RLY
 NO WAI
@@ -49,17 +51,17 @@ GIMMEH
 [/] in semantic analyzer, match the symbol table with statement id
 [/] clear the symbol table each with same statement id and replace with new value from semantic analyzer.
 [/] do variable declaration first
-[] after execute tsaka gagawin lex to sem and output
+[/] after execute tsaka gagawin lex to sem and output
 
 cd \Users/Administrator/Desktop/lolcode
 
 TO DO
-() arithmetic compound
-() expressions
+(/) arithmetic compound
+(/) expressions
 () if else
 () Switch
-() VISIBLE
-() gimmeh
+(/) VISIBLE
+(/) gimmeh
 () Errors
 
 reminder
