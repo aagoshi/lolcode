@@ -1,0 +1,77 @@
+VISIBLE
+	[] literal
+	[] variable
+	[] expression
+I HAS A 
+ITZ 
+	[/] literal
+	[/] variable
+	[] expression
+-
+R 
+	[/] literal
+	[/] variable
+	[] expression
+ARITHMETIC
+	[/] SUM OF
+	[/] DIFF OF
+	[/] PRODUKT OF
+	[/] QUOSHUNT OF
+	[/] MOD OF
+	[/] BIGGR OF
+	[/] SMALLR OF
+	[] PEMDAS
+COMPARISON
+	[/] BOTH SAEM
+	[/] DIFFRINT
+	[/] BOTH SAEM AN BIGGR OF
+	[/] BOTH SAEM AN SMALLR OF
+	[/] DIFFRINT AN BIGGR OF
+	[/] DIFFRINT AN SMALLR OF
+BOOLEAN
+	[/] BOTH OF
+	[/] EITHER OF
+	[/] WON OF
+	[/] NOT
+	[/] ALL OF MKAY
+	[/] ANY OF MKAY
+-
+YA RLY
+NO WAI
+-
+OMG
+OMGWTF
+GTFO
+-
+GIMMEH
+
+[/] in parser, symbol table will have a new value for statementid. update that
+[/] in semantic analyzer, match the symbol table with statement id
+[/] clear the symbol table each with same statement id and replace with new value from semantic analyzer.
+[/] do variable declaration first
+[] after execute tsaka gagawin lex to sem and output
+
+cd \Users/Administrator/Desktop/lolcode
+
+TO DO
+() arithmetic compound
+() expressions
+() if else
+() Switch
+() VISIBLE
+() gimmeh
+() Errors
+
+reminder
+[] fix MKAY
+[] Di nachecheck BOTH OF and other laman ng compounds
+[] checking of format of comparison
+[] check if float != int clean compare fxn
+[] check if int and float constant support (-) digit
+
+question
+[] pwede ba string literal sa type
+[] comparison check if float != int
+
+Errors
+[] Unbound variables
