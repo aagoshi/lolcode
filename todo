@@ -21,6 +21,8 @@ ARITHMETIC
 	[/] BIGGR OF
 	[/] SMALLR OF
 	[/] PEMDAS
+	[] more cases
+	- check in ifelse and io
 COMPARISON
 	[/] BOTH SAEM
 	[/] DIFFRINT
@@ -28,6 +30,8 @@ COMPARISON
 	[/] BOTH SAEM AN SMALLR OF
 	[/] DIFFRINT AN BIGGR OF
 	[/] DIFFRINT AN SMALLR OF
+	[] Variables
+	[] Expressions
 BOOLEAN
 	[/] BOTH OF
 	[/] EITHER OF
@@ -58,11 +62,11 @@ cd \Users/Administrator/Desktop/lolcode
 TO DO
 (/) arithmetic compound
 (/) expressions
-() if else
-() Switch
+(/) if else
+(/) Switch
 (/) VISIBLE
 (/) gimmeh
-() Errors
+(/) Errors
 
 reminder
 [] fix MKAY
@@ -72,8 +76,12 @@ reminder
 [] check if int and float constant support (-) digit
 
 question
-[] pwede ba string literal sa type
-[] comparison check if float != int
+[/] pwede ba string literal sa arithmetic
+[/] comparison check if float != int
 
 Errors
 [] Unbound variables
+
+2] dito sabi na Numbr at Numbar lang pwede else mageerror, pero sa sample may nakalagay na string type. bale pwede rin bang string as long as numbers din sila? 
+
+BOTH SAEM 1.0 AN 1
