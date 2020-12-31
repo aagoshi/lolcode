@@ -12,7 +12,6 @@ HAI
   DIFFRINT 4 AN 4
   VISIBLE IT
 
-
   BTW compound expressions
   DIFFRINT 2 AN BIGGR OF 1 AN 2
   VISIBLE IT
@@ -20,7 +19,6 @@ HAI
   VISIBLE IT
   DIFFRINT BOTH SAEM 1 AN 2 AN DIFFRINT 1 AN 2
   VISIBLE IT
-
 
   BTW with variables
   I HAS A var1 ITZ WIN

@@ -33,15 +33,6 @@ class Statement():
 	def appendTok(self, tok):
 		self.tokens.append(tok) 		  #appends to Statement's tokens list
 
-	def decode(self):					#parang semantic analyzer ng per statement # di ko sure kung mas tama siya ilagay dito o sa semantic analyzer na lang
-		if self.type == "<PRINT>":			
-			print("Successfully decoded print")
-			if self.tokens[2].type == "String_Literal":	#expected combination ["VISIBLE",'"', StringLiteralToken, '"']
-				#do whatever printing is supposed to do #DUMMY OUTPUT
-				print("THIS IS A DUMMY OUTPUT IN PRINT STATEMENT WITH VALUE OF :" + self.tokens[2].tok )
-		elif self.type == "<OUTPUT>":
-			print("THIS IS A DUMMY OUTPUT IN OUTPUT STATEMENT WITH VALUE OF :" + self.tokens[1].tok ) #DUMMY OUTPUT
-
 class Semantic_Analyzer():
 	def __init__(self, symbolTable, parseTree, interpreter):
 		self.symbolTable = symbolTable			#symbol table constantly updated
@@ -51,15 +42,8 @@ class Semantic_Analyzer():
 		self.output= []
 		self.hold = False
 		self.interpreter = interpreter
+		self.currentSymbIndex = 0
 		self.interpret()
-
-	#updates symbol table by replacing the tokens in the statement with the new value from the statement's value table
-	def updateTable(self,stmnt):
-		statementIndex = self.removeValues(stmnt) #remove the items in with the same statement id
-		#insert values from value table starting with the index of the first removed
-		for token in stmnt.valTab:
-			self.symbolTable.insert(statementIndex, token)
-			statementIndex += 1
 
 	#removes current statement after meaning is derived
 	def removeValues(self,stmnt):
@@ -78,9 +62,11 @@ class Semantic_Analyzer():
 	#get the value of the identifier
 	def getIdentValue(self,stmnt, token): #variable is the variable to search
 		for item in self.symbolTable:
-			if item.tok == token.tok and item.type == "Identifier" and item.statementId <= stmnt.id:
+			if item.tok == token.tok and item.type == "Identifier" : #and item.statementId <= stmnt.id:
 				return item.value
+		self.callError("ERROR: Uninitialized variable at line " + str(token.row))
 
+	#first step loops all the statements from the parsetree
 	def interpret(self):
 		for statement in self.statements:
 			if self.hold: break 			#don't iterate anymore if hold
@@ -88,10 +74,11 @@ class Semantic_Analyzer():
 				statement.passed = True
 				self.currentStatement = statement.id
 				self.solve(statement)
-				self.interpreter.update_symbolTable(self.symbolTable)
+				self.interpreter.update_symbolTable(self.symbolTable) #updates symbol table
 		if self.symbolTable[-1].tok == "KTHXBYE" and self.hold == False: self.symbolTable.pop(-1)
 		self.interpreter.update_symbolTable(self.symbolTable)
 
+	#redirects to respective statements
 	def solve(self, stmnt):
 		if stmnt.type == "<PRINT>":
 			self.print(stmnt)			
@@ -111,7 +98,6 @@ class Semantic_Analyzer():
 			self.ifelse(stmnt)
 		elif stmnt.type == "<START SWITCH>":
 			self.switch(stmnt)
-
 
 	def ifelse(self, stmnt):
 		#determine which block will the statement go
@@ -136,13 +122,13 @@ class Semantic_Analyzer():
 		for i in stmnt.tokens[0].block:				#for each statement id in WTF?.block
 			if self.statements[i].tokens[0].tok == "OMG":
 				if self.statements[i].tokens[1].type == "Integer_Constant" or self.statements[i].tokens[1].type == "Float_Constant" or self.statements[i].tokens[1].type == "TROOF":
-					if str(self.symbolTable[0].value) == self.statements[i].tokens[1].tok:
+					if str(self.symbolTable[0].value) == self.statements[i].tokens[1].tok or (str(self.symbolTable[0].value) == "True" and self.statements[i].tokens[1].tok == "WIN") or (str(self.symbolTable[0].value) == "False" and self.statements[i].tokens[1].tok == "FAIL"):
 						for i in self.statements[i].tokens[0].block:   #for each statementid referenced in the if block
 							self.statements[i].passed = True    			 #statement has been passed
 							self.solve(self.statements[i])
 						break
 				elif self.statements[i].tokens[1].type == "String_Delimiter":
-					if self.symbolTable[0].value == self.statements[i].tokens[2].tok: #if the string literal matches the value
+					if self.symbolTable[0].type == "String_Literal" and self.symbolTable[0].value == self.statements[i].tokens[2].tok: #if the string literal matches the value
 						for i in self.statements[i].tokens[0].block:   #for each statementid referenced in the if block
 							self.statements[i].passed = True    			 #statement has been passed
 							self.solve(self.statements[i])
@@ -169,28 +155,39 @@ class Semantic_Analyzer():
 				printvalue += stok[i].tok
 			elif stok[i].type == "Float_Constant":  	
 				printvalue += stok[i].tok
-			elif stok[i].tok == "WIN" or stok[i].tok == "FAIL":
+			elif stok[i].tok == "WIN" or stok[i].tok == "FAIL": #WIN FAIL literal
 				printvalue += stok[i].tok
 			elif stok[i].type == "Identifier":
-				printvalue += str(self.getIdentValue(stmnt, stok[i]))
+				varval = self.getIdentValue(stmnt, stok[i])
+				if str(varval) == "True": printvalue += "WIN"
+				elif str(varval) == "False" : printvalue += "FAIL"
+				elif varval == None and self.hold == False: self.callError("ERROR: Unbounded variable at line " + str(stok[i].row))
+				else: printvalue += str(varval)
 			elif stok[i].type == "Arithmetic_Op":		#Arithmetic expression case
 				stmnt.tokens = self.clearTokExp(stok,1)
 				printvalue += str(self.arithmetic(stmnt))
 				break
 			elif stok[i].type == "Boolean_Op":
 				stmnt.tokens = self.clearTokExp(stok,1)
-				printvalue += str(self.boolean(stmnt))
+				value = self.boolean(stmnt)
+				if value == True: printvalue += "WIN"
+				elif value == False: printvalue += "FAIL"
+				else: self.callError("ERROR: Invalid boolean expression at line " + str(stok[i].row))
 				break
 			elif stok[i].type == "Comparison_Op":
 				stmnt.tokens = self.clearTokExp(stok,1)
-				printvalue += str(self.comparison(stmnt))
+				value = self.comparison(stmnt)
+				if value == True: printvalue += "WIN"
+				elif value == False: printvalue += "FAIL"
+				else: self.callError("ERROR: Invalid comparison expression at line " + str(stok[i].row))
 				break
 			elif stok[i].type == "Output_Keyword" or stok[i].type == "String_Delimiter":
 				continue
 			else: callError("ERROR: Invalid printing on line "+ str(stok[0].row))
-		self.output.append(printvalue)
-		self.interpreter.update_exec(self.output, "<PRINT>")
-		self.removeValues(stmnt)
+		if self.hold == False:
+			self.output.append(printvalue)
+			self.interpreter.update_exec(self.output, "<PRINT>")
+			self.removeValues(stmnt)
 
 	def declaration(self,stmnt):
 		stok = stmnt.tokens 				#only to shorten name
@@ -221,7 +218,13 @@ class Semantic_Analyzer():
 				break
 			elif stok[i].type == "Identifier":
 				stmnt.valTab.append(stok[i])			    #append identifier to valueTable
-		self.updateTable(stmnt)
+		statementIndex = self.removeValues(stmnt) #remove the items in with the same statement id
+		#insert values from value table starting with the index of the first removed
+		self.currentSymbIndex += 1
+		if statementIndex == -1: statementIndex = self.currentSymbIndex
+		for token in stmnt.valTab:
+			self.symbolTable.insert(statementIndex, token)
+			statementIndex += 1
 
 	def assignment(self, stmnt):
 		stok = stmnt.tokens 				#only to shorten name
@@ -237,9 +240,9 @@ class Semantic_Analyzer():
 					elif stok[2].type == "String_Delimiter":      #string literal case
 						item.value = stok[3].tok
 					elif stok[2].tok == "WIN":
-						stmnt.valTab[0].value = True
+						item.value = True
 					elif stok[2].tok == "FAIL":
-						stmnt.valTab[0].value = False
+						item.value = False
 					elif stok[2].type == "Identifier":			#if variable R variable
 						item.value = self.getIdentValue(stmnt, stok[2])
 					elif stok[2].type == "Arithmetic_Op":		
@@ -283,29 +286,29 @@ class Semantic_Analyzer():
 		stok = stmnt.tokens
 		val = -1
 		#store to identifier IT (always in index 0)
-		if stok[0].tok == "BOTH OF": #AND
-			val = self.getBool(stok[1].tok) and self.getBool(stok[3].tok)
-		elif stok[0].tok == "EITHER OF": #OR
-			val = self.getBool(stok[1].tok) or self.getBool(stok[3].tok) 	
-		elif stok[0].tok == "WON OF": #XOR
-			val = self.getBool(stok[1].tok) ^ self.getBool(stok[3].tok) 	
-		elif stok[0].tok == "NOT": #NOT
-			val = not self.getBool(stok[1].tok)
+		if stok[0].tok == "BOTH OF" and len(stok) == 4: #AND
+			val = self.getBool(stmnt,stok[1]) and self.getBool(stmnt,stok[3])		
+		elif stok[0].tok == "EITHER OF" and len(stok) == 4: #OR
+			val = self.getBool(stmnt,stok[1]) or self.getBool(stmnt,stok[3])	
+		elif stok[0].tok == "WON OF" and len(stok) == 4: #XOR
+			val = self.getBool(stmnt,stok[1]) ^ self.getBool(stmnt,stok[3])	
+		if stok[0].tok == "NOT" and len(stok) == 2: #NOT
+			val = not self.getBool(stmnt,stok[1])
 		elif stok[0].tok == "ALL OF": 
 			i = 1
 			k = -1				#flag to determine if first bool block
 			while (i < len(stok)):
 				if stok[i].tok == "BOTH OF": #AND
-					boolblock = self.getBool(stok[i+1].tok) and self.getBool(stok[i+3].tok)
+					boolblock = self.getBool(stmnt,stok[i+1]) and self.getBool(stmnt,stok[i+3])
 					i += 4
 				elif stok[i].tok == "EITHER OF": #OR
-					boolblock = self.getBool(stok[i+1].tok) or self.getBool(stok[i+3].tok) 	
+					boolblock = self.getBool(stmnt,stok[i+1]) or self.getBool(stmnt,stok[i+3]) 	
 					i += 4
 				elif stok[i].tok == "WON OF": #XOR
-					boolblock = self.getBool(stok[i+1].tok) ^ self.getBool(stok[i+3].tok) 	
+					boolblock = self.getBool(stmnt,stok[i+1]) ^ self.getBool(stmnt,stok[i+3]) 	
 					i += 4
 				elif stok[i].tok == "NOT": #NOT
-					boolblock = not self.getBool(stok[i+1].tok)
+					boolblock = not self.getBool(stmnt,stok[i+1])
 					i += 2
 				elif stok[i].tok == "WIN": #NOT
 					boolblock = True
@@ -331,16 +334,16 @@ class Semantic_Analyzer():
 			k = -1				#flag to determine if first bool block
 			while (i < len(stok)):
 				if stok[i].tok == "BOTH OF": #AND
-					boolblock = self.getBool(stok[i+1].tok) and self.getBool(stok[i+3].tok)
+					boolblock = self.getBool(stmnt,stok[i+1]) and self.getBool(stmnt,stok[i+3])
 					i += 4
 				elif stok[i].tok == "EITHER OF": #OR
-					boolblock = self.getBool(stok[i+1].tok) or self.getBool(stok[i+3].tok) 	
+					boolblock = self.getBool(stmnt,stok[i+1]) or self.getBool(stmnt,stok[i+3]) 	
 					i += 4
 				elif stok[i].tok == "WON OF": #XOR
-					boolblock = self.getBool(stok[i+1].tok) ^ self.getBool(stok[i+3].tok) 	
+					boolblock = self.getBool(stmnt,stok[i+1]) ^ self.getBool(stmnt,stok[i+3]) 	
 					i += 4
 				elif stok[i].tok == "NOT": #NOT
-					boolblock = not self.getBool(stok[i+1].tok)
+					boolblock = not self.getBool(stmnt,stok[i+1])
 					i += 2
 				elif stok[i].tok == "WIN": #NOT
 					boolblock = True
@@ -361,15 +364,48 @@ class Semantic_Analyzer():
 					else: val = self.symbolTable[0].value or boolblock
 					break
 				else: self.callError("ERROR: INVALID BOOLEAN STATEMENT on line " + str(stok[0].row))
-		else: self.callError("ERROR: INVALID BOOLEAN STATEMENT on line " + str(stok[0].row))
+		elif len(stok) > 4: 
+			val = self.compoundBool(stmnt, stok)
+		#else: self.callError("ERROR: INVALID BOOLEAN STATEMENT on line " + str(stok[0].row))
 		self.removeValues(stmnt)
 		if val == True or val == False: return val  #return a value only if True or False and value
 		else: self.callError("ERROR: INVALID BOOLEAN STATEMENT on line " + str(stok[0].row))
 
-	def getBool(self, token):
-		if token == "WIN": return True
-		elif token == "FAIL": return False
-		else: self.callError("ERROR: not a TROOF") 
+	def getBool(self,stmnt, token):
+		if token.tok == "WIN": return True
+		elif token.tok == "FAIL": return False
+		elif token.type == "Identifier":
+			val = self.getIdentValue(stmnt, token)
+			if val == True or val == False: return val
+			else: self.callError("ERROR: variable value not a TROOF on line " + str(token.row)) 
+		else: self.callError("ERROR: not a TROOF on line " + str(token.row)) 
+
+	def compoundBool(self,stmnt,stok):
+		opstack = []
+		for i in range(len(stok)-1,-1,-1):
+			if stok[i].tok == "NOT" and len(opstack) != 0: #NOT
+				x = opstack.pop()
+				val = not x
+				opstack.append(val)
+			elif stok[i].type == "Boolean_Op" and len(opstack) != 0: #if token is Boolean operation and stack is not empty
+				x = opstack.pop()
+				y = opstack.pop()
+				if stok[i].tok == "BOTH OF": #AND
+					val = x and y
+				elif stok[i].tok == "EITHER OF": #OR
+					val = x or y 	
+				elif stok[i].tok == "WON OF": #XOR
+					val = x ^ y 	
+				else: callError("ERROR: INVALID BOOLEAN OP on line " + str(stok[i].row))
+				opstack.append(val)
+			elif  stok[i].type == "TROOF":
+				opstack.append(self.getBool(stmnt, stok[i])) #add integer operands
+			elif stok[i].type == "Op_Sep" or stok[i].type == "END_Op": #if AN, ignore
+				continue				   
+			else:
+				self.callError("Error: Invalid arithmetic expression on line" + str(stok[0].row))
+				break
+		return opstack.pop()
 
 	def comparison(self, stmnt):
 		stok = stmnt.tokens
@@ -383,52 +419,69 @@ class Semantic_Analyzer():
 			if a == False: val = False
 			else: val = (a != b)
 		elif stok[0].tok == "BOTH SAEM" and stok[3].tok == "BIGGR OF":  # if >=
-			a, b = self.compare(stmnt, stok[4], stok[6])
-			if a == False: val = False
-			else: val = (a >= b)
+			if stok[1].tok == stok[4].tok:
+				a, b = self.compare(stmnt, stok[4], stok[6])
+				if a == False: val = False
+				else: val = (a >= b)
+			else: self.callError("ERROR: expected same value operand on line " + str(stok[4].row))
 		elif stok[0].tok == "BOTH SAEM" and stok[3].tok == "SMALLR OF": # if <=
-			a, b = self.compare(stmnt, stok[4], stok[6])
-			if a == False: val = False
-			else: val = (a <= b)
+			if stok[1].tok == stok[4].tok:
+				a, b = self.compare(stmnt, stok[4], stok[6])
+				if a == False: val = False
+				else: val = (a <= b)
+			else: self.callError("ERROR: expected same value operand on line " + str(stok[4].row))
 		elif stok[0].tok == "DIFFRINT" and stok[3].tok == "BIGGR OF":   # if >
-			a, b = self.compare(stmnt, stok[4], stok[6])
-			if a == False: val = False
-			else: val = (a > b)
+			if stok[1].tok == stok[4].tok:
+				a, b = self.compare(stmnt, stok[4], stok[6])
+				if a == False: val = False
+				else: val = (a > b)
+			else: self.callError("ERROR: expected same value operand on line " + str(stok[4].row))
 		elif stok[0].tok == "DIFFRINT" and stok[3].tok == "SMALLR OF":  # if <
-			a, b = self.compare(stmnt, stok[4], stok[6])
-			if a == False: val = False
-			else: val = (a < b)
-		else: self.callError("ERROR: Invalid comparison operator at line " + str(stok[0].row)) #mangyayari lang to if may mali sa syntax
+			if stok[1].tok == stok[4].tok:
+				a, b = self.compare(stmnt, stok[4], stok[6])
+				if a == False: val = False
+				else: val = (a < b)
+			else: self.callError("ERROR: expected same value operand on line " + str(stok[4].row))
+		else:
+			val = self.compoundComparison(stmnt)
+
+		#else:self.callError("ERROR: Invalid comparison operator at line " + str(stok[0].row)) #mangyayari lang to if may mali sa syntax
 		self.removeValues(stmnt)
 		return val
 
+	def compoundComparison(self,stmnt):
+		stok = stmnt.tokens
+		opstack = []
+		for i in range(len(stok)-1,-1,-1):
+			if stok[i].type == "Comparison_Op" and len(opstack) != 0: #if token is Arithmetic operation and stack is not empty
+				x = opstack.pop()
+				y = opstack.pop()
+				if stok[i].tok == "BOTH SAEM": val = (x == y)
+				elif stok[i].tok == "DIFFRINT": val = (x != y)
+				opstack.append(val)
+			elif stok[i].type == "Arithmetic_Op" and len(opstack) != 0: #if token is Arithmetic operation and stack is not empty
+				x = opstack.pop()
+				y = opstack.pop()
+				opstack.append(self.basicExp(x,y,stok[i].tok))
+			elif  stok[i].type == "Identifier":
+				opstack.append(self.getIdentValue(stmnt, stok[i])) 
+			elif  stok[i].type == "Integer_Constant":
+				opstack.append(int(stok[i].tok)) #add integer operands
+			elif stok[i].type == "Float_Constant":
+				opstack.append(float(stok[i].tok)) #add float operands
+			elif stok[i].type == "Op_Sep" or stok[i].type == "END_Op": #if AN, ignore
+				continue				   
+			else:
+				self.callError("Error: Invalid comparison expression on line" + str(stok[0].row))
+				break
+		return opstack.pop()
+
 	def compare(self,stmnt, x,y):
-		''' #version where float != int
-		if x.type == "Identifier" and y.type == "Identifier": 
-			a = self.getIdentValue(stmnt, x)
-			b = self.getIdentValue(stmnt, y)
-		elif x.type == "Identifier" and y.type == "Integer_Constant": 
-			a = self.getIdentValue(stmnt, x) 
-			b = int(y.tok)
-		elif x.type == "Identifier" and y.type == "Float_Constant": 
-			a = self.getIdentValue(stmnt, x) 
-			b = float(y.tok)
-		elif x.type == "Integer_Constant" and y.type == "Identifier": 
-			a = int(x.tok)
-			b = self.getIdentValue(stmnt, y)
-		elif x.type == "Float_Constant" and y.type == "Identifier": 
-			a = float(x.tok)
-			b = self.getIdentValue(stmnt, y)
-		else:
-			if x.type == "Integer_Constant": a = int(x.tok)
-			elif x.type == "Float_Constant": a = float(x.tok)
-			if y.type == "Integer_Constant": b = int(y.tok)
-			elif y.type == "Float_Constant": b = float(y.tok)
-		'''
 		#Numbr typecast to Numbar
-		if x.type == "Identifier" and y.type == "Identifier": 
+		if x.type == "Identifier" and y.type == "Identifier":
 			a = self.getIdentValue(stmnt, x)
 			b = self.getIdentValue(stmnt, y)
+			print(" " + str(a) + " " + str(y.tok))
 		elif x.type == "Identifier" and (y.type == "Integer_Constant" or y.type == "Integer_Constant"): 
 			a = self.getIdentValue(stmnt, x) 
 			b = float(y.tok)
@@ -450,23 +503,23 @@ class Semantic_Analyzer():
 	def arithmetic(self, stmnt):
 		stok = stmnt.tokens
 		if len(stok) == 4: #if basic expression
-			a, b = self.checktype(stok[1],stok[3]) 
+			a, b = self.checktype(stmnt, stok[1],stok[3]) 
 			val = self.basicExp(a,b,stok[0].tok)
-		elif (stok[1].type == "Integer_Constant" or stok[1].type == "Float_Constant") and stok[4].type == "String_Literal" and len(stok) == 6:
-			a, b = self.checktype(stok[1],stok[4])
+		elif len(stok) == 6 and (stok[1].type == "Integer_Constant" or stok[1].type == "Float_Constant") and stok[4].type == "String_Literal":
+			a, b = self.checktype(stmnt, stok[1],stok[4])
 			val = self.basicExp(a,b,stok[0].tok)
-		elif stok[2].type == "String_Literal" and (stok[5].type == "Integer_Constant" or stok[5].type == "Float_Constant") and len(stok) == 6 :
-			a, b = self.checktype(stok[2],stok[5])
+		elif len(stok) == 6 and stok[2].type == "String_Literal" and (stok[5].type == "Integer_Constant" or stok[5].type == "Float_Constant"):
+			a, b = self.checktype(stmnt, stok[2],stok[5])
 			val = self.basicExp(a,b,stok[0].tok)
-		elif stok[2].type == "String_Literal" and stok[6].type == "String_Literal" and len(stok) == 8:
-			a, b = self.checktype(stok[2],stok[6])
+		elif len(stok) == 8 and stok[2].type == "String_Literal" and stok[6].type == "String_Literal":
+			a, b = self.checktype(stmnt, stok[2],stok[6])
 			val = self.basicExp(a,b,stok[0].tok)
 		else: #compound expressions
-			val = self.compoundArithmetic(stok)
+			val = self.compoundArithmetic(stmnt, stok)
 		self.removeValues(stmnt)
 		return val
 
-	def checktype(self, x,y):
+	def checktype(self, stmnt, x,y):
 		if x.type == "Identifier" and y.type == "Identifier": 
 			a = self.getIdentValue(stmnt, x)
 			b = self.getIdentValue(stmnt, y)
@@ -545,7 +598,7 @@ class Semantic_Analyzer():
 		else: self.callError("ERROR: Invalid arithmetic operator on line " + str(x.row))
 		return val
 
-	def compoundArithmetic(self,stok): # prefix evaluation using stack
+	def compoundArithmetic(self,stmnt,stok): # prefix evaluation using stack
 		opstack = []
 		for i in range(len(stok)-1,-1,-1):
 			if stok[i].type == "Arithmetic_Op" and len(opstack) != 0: #if token is Arithmetic operation and stack is not empty
@@ -556,6 +609,8 @@ class Semantic_Analyzer():
 				opstack.append(int(stok[i].tok)) #add integer operands
 			elif stok[i].type == "Float_Constant" or (stok[i].type == "String_Literal" and self.isFloat(stok[i].tok)):
 				opstack.append(float(stok[i].tok)) #add float operands
+			elif  stok[i].type == "Identifier":
+				opstack.append(self.getIdentValue(stmnt, stok[i])) 
 			elif stok[i].type == "Op_Sep" or stok[i].type == "END_Op": #if AN, ignore
 				continue				   
 			else:
@@ -621,7 +676,7 @@ class Syntax_Analyzer():
 			else: self.callError("SYNTAX ERROR: KTHXBYE expected on line " + str(self.tokens[-1].row)) #di ko sure kunt tama icheck agad kthxbye baka skip muna ito
 		else: self.callError("SYNTAX ERROR: HAI expected on line " + str(self.tokens[0].row))
 
-	def statement(self): #<statement> ::= <statement><linebreak><statement> | <expression> | <switchcase> | <ifthen> | <varcall> | <print> | <input> 
+	def statement(self): 
 		global insideswitch
 		if self.tokens[self.tokindex].type == "Output_Keyword": #for VISIBLE/ <print> case
 			self.nextstmnt()
@@ -732,7 +787,7 @@ class Syntax_Analyzer():
 				while self.tokens[self.tokindex].type != "Cond_End":
 					
 					if self.tokens[self.tokindex].type == "Default_Case":
-						default = True
+						default = False
 						if self.tokens[self.tokindex-1].type != "Break":
 							if nobreak <= 0:
 								nobreak = 0
@@ -748,7 +803,9 @@ class Syntax_Analyzer():
 								nobreakcase1.append(self.statementId)
 								nobreakcase2 = nobreakcase1
 								nobreakcase1 = nobreakcase
-							# nobreakcase = omg_block			
+							nobreakcase = omg_block	
+							# nobreakcase.append(self.statementId)
+							# nobreakcase1.append(self.statementId)		
 							nobreak += 1
 						if self.tokens[self.tokindex-1].type == "Break":
 							
@@ -770,15 +827,15 @@ class Syntax_Analyzer():
 							
 						omg_row = self.tokens[self.tokindex].row
 						omg_block = self.tokens[self.tokindex].block
-						default = True
+						default = False
 						self.nextstmnt()
 						self.next()
 						self.parsetree.append(Statement([self.tokens[self.tokindex-1]], "<DEFAULT CASE>", self.statementId))
 						wtf_block.append(self.statementId)
 						if self.tokens[self.tokindex].row != omg_row:
 							self.statement()
-						else: self.callError("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
-						# else: self.callError("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))	
+						else: print("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
+						# else: print("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))	
 					else:
 						if numofomg > 0:
 							if self.tokens[self.tokindex-1].type != "Break" and self.tokens[self.tokindex].type == "Switch_Case":
@@ -817,6 +874,9 @@ class Syntax_Analyzer():
 									nobreakcase1 = nobreakcase
 								# nobreakcase = omg_block
 
+
+							
+
 						if self.tokens[self.tokindex].type == "Break":
 							self.nextstmnt()
 							self.next()
@@ -830,25 +890,18 @@ class Syntax_Analyzer():
 							self.next()
 							
 							if self.tokens[self.tokindex].row != omg_row:
-								self.callError("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))	
-							elif self.tokens[self.tokindex].type == "Identifier" or self.tokens[self.tokindex].type == "Float_Constant" or self.tokens[self.tokindex].type == "Integer_Constant" or self.tokens[self.tokindex].type == "TROOF" or self.tokens[self.tokindex+1].type == "String_Literal":
+								print("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))	
+							elif self.tokens[self.tokindex].type == "Identifier" or self.tokens[self.tokindex].type == "Float_Constant" or self.tokens[self.tokindex].type == "Integer_Constant" or self.tokens[self.tokindex].type == "TROOF":
 								self.parsetree.append(Statement([self.tokens[self.tokindex-1]], "<SWITCH CASE>", self.statementId))
 								wtf_block.append(self.statementId)
 								self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
+								print(str(self.tokindex) + " ")
 								self.next()
-								if self.tokens[self.tokindex].type == "String_Literal":     #if literal is YARN
-									self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
-									self.next()
-									self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
-									self.next()
-									self.statement()
-									if self.tokens[self.tokindex].row != omg_row:
-										self.statement()
-									else: self.callError("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
 								if self.tokens[self.tokindex].row != omg_row:
 									self.statement()
-								else: self.callError("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
-							else: self.callError("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))		
+									
+								else: print("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
+							else: print("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))		
 						elif self.tokens[self.tokindex-1].type != "Break" and self.tokens[self.tokindex-1].type != "Start_Switch":
 							if nobreak > 0 and default == False:
 								nobreakcase.append(self.statementId)
@@ -857,18 +910,41 @@ class Syntax_Analyzer():
 							
 							omg_block.append(self.statementId)
 							self.statement()
-							# else: self.callError("SYNTAX ERROR: GTFO expected on line " + str(self.tokens[self.tokindex].row))	
-						else: self.callError("SYNTAX ERROR: OMG expected on line " + str(self.tokens[self.tokindex].row))
-				omg_block.append(self.statementId)
+							# else: print("SYNTAX ERROR: GTFO expected on line " + str(self.tokens[self.tokindex].row))	
+						else: print("SYNTAX ERROR: OMG expected on line " + str(self.tokens[self.tokindex].row))
+				if default ==  True:
+					omg_block.append(self.statementId)
+				# if nobreak <= 0:
+				# 			nobreak = 0
+				# 			nobreakcase = omg_block
+
+				# if nobreak == 1:
+				# 	# nobreakcase.append(self.statementId)
+				# 	nobreakcase1 = nobreakcase
+				# elif nobreak == 2:
+				# 	# nobreakcase.append(self.statementId)
+				# 	# nobreakcase1.append(self.statementId)
+				# 	nobreakcase2 = nobreakcase1
+				# 	nobreakcase1 = nobreakcase
+				else:
+					if self.tokens[self.tokindex-1].type == "Break":
+						omg_block.append(self.statementId-1)
+						nobreakcase.append(self.statementId)
+						nobreakcase1.append(self.statementId)
+						nobreakcase2.append(self.statementId)
+					else:
+						omg_block.append(self.statementId)
+						nobreakcase.append(self.statementId)
+						nobreakcase1.append(self.statementId)
+						nobreakcase2.append(self.statementId)
 				self.nextstmnt()
 				self.parsetree.append(Statement([self.tokens[self.tokindex]], "<END SWITCH>", self.statementId))
 				wtf_block.append(self.statementId)
 				self.next()
 				insideswitch = False
 				self.statement()
-			else: self.callError("SYNTAX ERROR: WTF? must be alone on line " + str(self.tokens[self.tokindex].row))
+			else: print("SYNTAX ERROR: WTF? must be alone on line " + str(self.tokens[self.tokindex].row))
 		
-
 	def print(self):
 		insideifelse = False
 		if self.tokens[self.tokindex-1].type == "Win_Cond" or self.tokens[self.tokindex-1].type == "Fail_Cond" or insideswitch == True:
@@ -977,7 +1053,7 @@ class Syntax_Analyzer():
 				self.next()
 				if insideifelse == False:
 					self.statement()
-			else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+			else: self.callError("SYNTAX ERROR: Identifier or TROOF literal expected on line: " + str(self.tokens[self.tokindex].row))		
 		elif self.tokens[self.tokindex].tok == "ALL OF" or self.tokens[self.tokindex].tok == "ANY OF":
 			num_id = 0
 			line_num = self.tokens[self.tokindex].row
@@ -994,7 +1070,7 @@ class Syntax_Analyzer():
 						self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
 						self.next()
 						num_id += 1
-					else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+					else: self.callError("SYNTAX ERROR: Identifier or TROOF literal expected on line: " + str(self.tokens[self.tokindex].row))		
 				elif self.tokens[self.tokindex].tok == "BOTH OF" or self.tokens[self.tokindex].tok == "EITHER OF" or self.tokens[self.tokindex].tok == "WON OF":
 					self.parsetree[-1].appendTok(self.tokens[self.tokindex])
 					self.next()
@@ -1008,14 +1084,14 @@ class Syntax_Analyzer():
 								self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
 								self.next()
 								num_id += 1
-							else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+							else: self.callError("SYNTAX ERROR: Identifier or TROOF literal expected on line: " + str(self.tokens[self.tokindex].row))		
 						else: self.callError("SYNTAX ERROR: Operand Separator expected on line: " + str(self.tokens[self.tokindex].row))		
-					else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+					else: self.callError("SYNTAX ERROR: Identifier or TROOF literal expected on line: " + str(self.tokens[self.tokindex].row))		
 				elif self.tokens[self.tokindex].type == "Comparison_Op":
 					self.parsetree[-1].appendTok(self.tokens[self.tokindex])
 					self.next()
 					self.comparison()
-				else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+				else: self.callError("SYNTAX ERROR: Invalid token in comparison expression on line: " + str(self.tokens[self.tokindex].row))		
 
 				if num_id >= 1:
 					if self.tokens[self.tokindex].type == "End_Op":	
@@ -1034,9 +1110,9 @@ class Syntax_Analyzer():
 				self.next()
 				if insideifelse == False:
 					self.statement()
-			else:
-				if insideifelse == False:
-					self.statement()
+			else: self.callError("SYNTAX ERROR: Expected MKAY on line: " + str(self.tokens[self.tokindex-1].row))
+				# if insideifelse == False:
+				# 	self.statement()
 
 		else:
 			self.next()
@@ -1051,51 +1127,73 @@ class Syntax_Analyzer():
 						self.next()
 						if insideifelse == False:
 							self.statement()
-					else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+					else: self.callError("SYNTAX ERROR: Identifier or TROOF literal expected on line: " + str(self.tokens[self.tokindex].row))		
 				else: self.callError("SYNTAX ERROR: Operand Separator expected on line: " + str(self.tokens[self.tokindex].row))		
-			else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+			elif self.tokens[self.tokindex].type == "Boolean_Op":
+				bool_row = self.tokens[self.tokindex].row
+				while (self.tokens[self.tokindex].row == bool_row):
+					if self.tokens[self.tokindex].type == "Identifier" or self.tokens[self.tokindex].type == "TROOF" or  self.tokens[self.tokindex].type == "Boolean_Op" or  self.tokens[self.tokindex].type == "Op_Sep":
+						self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
+						self.next()
+					else: self.callError("SYNTAX ERROR: Invalid token on line: " + str(self.tokens[self.tokindex].row))
+				self.statement()
+			else: self.callError("SYNTAX ERROR: Identifier or TROOF literal expected on line: " + str(self.tokens[self.tokindex].row))		
 
 	def arithmetic(self):
 		insideifelse = False
 		if self.tokens[self.tokindex-1].type == "Win_Cond" or self.tokens[self.tokindex-1].type == "Fail_Cond" or insideswitch == True:
 			insideifelse = True
 		no_of_operands = 2
-		while self.tokens[self.tokindex].type != "Integer_Constant" and self.tokens[self.tokindex].type != "Float_Constant" and self.tokens[self.tokindex].type != "String_Delimiter" and self.tokens[self.tokindex].type != "Identifier":
-			if self.tokens[self.tokindex].type == "Arithmetic_Op":
-				self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
-				self.next()
+		i = self.tokindex
+		op_row = self.tokens[self.tokindex].row
+		#while self.tokens[i].type != "Integer_Constant" and self.tokens[i].type != "Float_Constant" and self.tokens[i].type != "String_Delimiter" and self.tokens[i].type != "Identifier":
+		while self.tokens[i].row == op_row:
+			if self.tokens[i].type == "Arithmetic_Op":
 				no_of_operands += 1
-			else:  self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))
-					
-		while no_of_operands != 0:
-			if self.tokens[self.tokindex].type == "String_Delimiter":
-				self.parsetree[-1].appendTok(self.tokens[self.tokindex]) 		#calls the statement method appendTok and adds tokens to the Tokens list of the most recent statement
-				self.next()
-				self.next() #move 2 indeces
-				if self.tokens[self.tokindex].type == "String_Delimiter":
-					self.parsetree[-1].appendTok(self.tokens[self.tokindex-1])    #adds the end string delimiter
-					self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds string literal
+			i += 1
+			#else:  self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))
+		
+
+		if no_of_operands > 2:
+			self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
+			self.next()
+			arith_row = self.tokens[self.tokindex].row
+			while (self.tokens[self.tokindex].row == arith_row):
+				if self.tokens[self.tokindex].type == "Identifier" or self.tokens[self.tokindex].type == "Integer_Constant" or self.tokens[self.tokindex].type == "Float_Constant"or self.tokens[i].type != "String_Delimiter"or self.tokens[i].type != "String_Literal" or self.tokens[self.tokindex].type == "Arithmetic_Op" or  self.tokens[self.tokindex].type == "Op_Sep":
+					self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
 					self.next()
-					no_of_operands -=1							   #back to self.statement to check if there are more statements /recursively call it again
-				else: self.callError("SYNTAX ERROR: String Delimiter expected on line " + str(self.tokens[self.tokindex].row))
-				
-				if no_of_operands != 0:
-					if self.tokens[self.tokindex].type == "Op_Sep":	
-						self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
+				else: self.callError("SYNTAX ERROR: Invalid token on line: " + str(self.tokens[self.tokindex].row))
+			self.statement()
+		else: 
+			while no_of_operands != 0:
+				if self.tokens[self.tokindex].type == "String_Delimiter":
+					self.parsetree[-1].appendTok(self.tokens[self.tokindex]) 		
+					self.next()
+					self.next() #move 2 indeces
+					if self.tokens[self.tokindex].type == "String_Delimiter":
+						self.parsetree[-1].appendTok(self.tokens[self.tokindex-1])    #adds the end string delimiter
+						self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds string literal
 						self.next()
-					else: self.callError("SYNTAX ERROR: Operand Separator expected on line: " + str(self.tokens[self.tokindex].row))		
-				else: break
-			elif self.tokens[self.tokindex].type != "Integer_Constant" or self.tokens[self.tokindex].type != "Float_Constant" or self.tokens[self.tokindex].type != "Identifier":
-				self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
-				self.next()
-				no_of_operands -= 1
-				if no_of_operands != 0:
-					if self.tokens[self.tokindex].type == "Op_Sep":	
-						self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
-						self.next()
-					else: self.callError("SYNTAX ERROR: Operand Separator expected on line: " + str(self.tokens[self.tokindex].row))		
-				else: break
-			else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
+						no_of_operands -=1							   #back to self.statement to check if there are more statements /recursively call it again
+					else: self.callError("SYNTAX ERROR: String Delimiter expected on line " + str(self.tokens[self.tokindex].row))
+					
+					if no_of_operands != 0:
+						if self.tokens[self.tokindex].type == "Op_Sep":	
+							self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
+							self.next()
+						else: self.callError("SYNTAX ERROR: Operand Separator expected on line: " + str(self.tokens[self.tokindex].row))		
+					else: break
+				elif self.tokens[self.tokindex].type != "Integer_Constant" or self.tokens[self.tokindex].type != "Float_Constant" or self.tokens[self.tokindex].type != "Identifier":
+					self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
+					self.next()
+					no_of_operands -= 1
+					if no_of_operands != 0:
+						if self.tokens[self.tokindex].type == "Op_Sep":	
+							self.parsetree[-1].appendTok(self.tokens[self.tokindex])	
+							self.next()
+						else: self.callError("SYNTAX ERROR: Operand Separator expected on line: " + str(self.tokens[self.tokindex].row))		
+					else: break
+				else: self.callError("SYNTAX ERROR: Identifier expected on line: " + str(self.tokens[self.tokindex].row))		
 
 		if insideifelse == False:
 			self.statement()
@@ -1284,98 +1382,26 @@ class Syntax_Analyzer():
 		output.append(text)
 		self.interpreter.update_exec(output, "<PRINT>")
 		self.error = True
-'''
-	def expression(self):
-		if self.tokens[self.tokindex].type == "Output_Keyword":
-			self.next()
-			self.print()
-		elif self.tokens[self.tokindex].type == "Accept_Keyword": #for GIMMEH/ <input> case
-			# self.parsetree.append(Statement([self.tokens[self.tokindex]], "<INPUT>"))
-			self.next()
-			self.input()
-		elif self.tokens[self.tokindex].type == "Variable_Declaration": #for I HAS A/ <DECLARATION> case
-			# self.parsetree.append(Statement([self.tokens[self.tokindex]], "<DECLARATION>"))
-			self.next()
-			self.variable()
-		elif self.tokens[self.tokindex].type == "Boolean_Op": #for <boolean> case
-			# self.parsetree.append(Statement([self.tokens[self.tokindex]], "<BOOLEAN>"))
-			self.bool()
-		elif self.tokens[self.tokindex].type == "Arithmetic_Op": #for <arithmetic> case
-			# self.parsetree.append(Statement([self.tokens[self.tokindex]], "<ARITHMETIC>"))
-			self.next()
-			self.arithmetic()
-		elif self.tokens[self.tokindex].type == "Comparison_Op": #for <comparison> case
-			# self.parsetree.append(Statement([self.tokens[self.tokindex]], "<COMPARISON>"))
-			self.next()
-			self.comparison()
-		elif self.tokens[self.tokindex].type == "Identifier": #for <assignment> case
-			self.next()
-			if self.tokens[self.tokindex].type == "Assignment": #for <assignment> case
-				# self.parsetree.append(Statement([self.tokens[self.tokindex-1]], "<ASSIGNMENT>"))
-				self.next()
-				self.assignment()
-			else: print("SYNTAX ERROR: Assignment operator expected on line " + str(self.tokens[self.tokindex].row))
-	
-	def cases(self):
-		if self.tokens[self.tokindex].type == "Break":
-			self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-			print(str(self.tokindex) + " ")
-			self.next()
-		elif self.tokens[self.tokindex].type == "Default_Case":
-			self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-			print(str(self.tokindex) + " ")
-			self.expression()
-		elif self.tokens[self.tokindex-1].type != "Break" and self.tokens[self.tokindex-1].type != "Start_Switch":
-			self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-			print(str(self.tokindex) + " ")
-			self.expression()
-		elif self.tokens[self.tokindex].type == "Switch_Case":
-			omg_row = self.tokens[self.tokindex].row
-			self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-			print(str(self.tokindex) + " ")
-			self.next()
-			if self.tokens[self.tokindex].row != omg_row:
-				print("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))	
-			elif self.tokens[self.tokindex].type == "Identifier" or self.tokens[self.tokindex].type == "Float_Constant" or self.tokens[self.tokindex].type == "Integer_Constant" or self.tokens[self.tokindex].type == "TROOF":
-				self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-				print(str(self.tokindex) + " ")
-				self.next()
-				if self.tokens[self.tokindex].row != omg_row:
-					expr_row = self.tokens[self.tokindex].row
-					self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-					print(str(self.tokindex) + " ")
-					self.expression()
-					# while self.tokens[self.tokindex].type != "Break":
-					# 	if self.tokens[self.tokindex].row != expr_row:
-					# 		self.expression()
-					# 		expr_row = self.tokens[self.tokindex].row
-					# 	else: print("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
-					# self.parsetree[-1].appendTok(self.tokens[self.tokindex])	#adds identifier to parse tree
-					# print(str(self.tokindex) + " ")
-					# self.next()
-				else: print("SYNTAX ERROR: Expression must be on a separate line on line " + str(self.tokens[self.tokindex].row))	
-			else: print("SYNTAX ERROR: Literal expected on line " + str(self.tokens[self.tokindex].row))	
-		else: print("SYNTAX ERROR: OMG expected on line " + str(self.tokens[self.tokindex].row))
-'''
 
 class Interpreter():
 	def __init__(self, root):
 		self.root = root
 		self.line_num = 1
+		self.error = False
 		self.root.title("Lolcode interpreter")
 		self.init_gui()
 
 	def init_gui(self): #set the GUI
 		self.rootwidth = 1120
-		self.rootheight = 600
+		self.rootheight = 700
 		self.root.geometry("%dx%d" % (self.rootwidth, self.rootheight)) 
-		self.root.resizable(False, False)
+		#self.root.resizable(False, False)
 		#top frame where code, token table, and symbol table will be put, invisible
-		self.frametop = Frame(self.root,width = self.rootwidth, height = self.rootheight*0.5) #creates frame in middle of the screen where tiles be put
+		self.frametop = Frame(self.root,width = self.rootwidth, height = self.rootheight*0.45) #creates frame in middle of the screen where tiles be put
 		self.frametop.grid(row = 0, column = 0)
 		self.frametop.grid_propagate(0)
 		#bottom frame where execute will be done
-		self.framebot = Frame(self.root, bg = "light gray", width = self.rootwidth-20, height = self.rootheight*0.45) #creates frame in middle of the screen where tiles be put
+		self.framebot = Frame(self.root, bg = "light gray", width = self.rootwidth-20, height = self.rootheight*0.6) #creates frame in middle of the screen where tiles be put
 		self.framebot.grid(row = 1 , column = 0, padx = 10, pady = 10)
 		self.framebot.grid_propagate(0)
 		self.init_codeframe() #frame for entering code under frametop
@@ -1387,7 +1413,7 @@ class Interpreter():
 		self.execButton = Button(self.framebot, text = "Execute", width = 140)
 		self.execButton.grid(row = 0, column = 0, padx = 5, pady = 5)
 		self.execButton.grid_propagate(0)
-		self.execScreen = Frame(self.framebot,bg = "light gray", width = self.rootwidth-20, height = self.rootheight*0.45)
+		self.execScreen = Frame(self.framebot,bg = "light gray", width = self.rootwidth-20, height = self.rootheight*0.6)
 		self.execScreen.grid(row = 1, column = 0, padx = 5, pady = 5, sticky= "w")
 
 	def init_codeframe(self):
@@ -1452,14 +1478,17 @@ class Interpreter():
 		content = self.read_file(filename) #returns the whole file as a single string
 		self.execButton.configure(command = lambda: self.run(content))
 
+	############## MAIN PROGRAM FOR THE INTERPRETER###############
 	def run(self, content):
 		#LEXICAL ANALYSIS
 		lexemes = [] #formerly samplelex, pinaltan lang para mas malinis
 		tokens = self.lexical_analyzer(content) #performs lexical analysis
+
 		#reformats tokens in lexemes list for printing in lexemeTable
 		for i in range(0,len(tokens)):
 			lexemes.append([tokens[i].tok, tokens[i].type])
 			print("  " + str(tokens[i].row) + " " + str(tokens[i].tok) )
+
 		# lexemes = [["HAI", "Code Delimiter"],["I HAS A", "variable Declaration"], ["12", "Literal"]] #sample lexeme table to test printing
 		self.fill_lexTable(lexemes)
 
@@ -1467,24 +1496,27 @@ class Interpreter():
 		self.symbolTable = copy.deepcopy(tokens)
 		self.update_symbolTable(self.symbolTable)
 
-		#SYNTAX ANALYSIS
-		self.syntax = Syntax_Analyzer(self.symbolTable, self) #dynamically updates statement id of Tokens in symbolTable 
-		self.syntax.viewparse() #prints parse tree to console for viewing
+		if self.error == False: #if lexical analysis does not have an error
+			#SYNTAX ANALYSIS
+			self.syntax = Syntax_Analyzer(self.symbolTable, self) #dynamically updates statement id of Tokens in symbolTable 
+			self.syntax.viewparse() #prints parse tree to console for viewing
 
-		#checks if symbolTable is updated
-		for token in self.symbolTable :
-			print( str(token.statementId) + " " + str(token.tok) + " " + str(token.block))
-
-		if self.syntax.error == False: #if syntax analysis has no error continue semantic analysis
-			#SEMANTIC ANALYSIS
-			self.sem = Semantic_Analyzer(self.symbolTable,self.syntax.parsetree,self)
-
-			print("\n")
-			#checks if symbolTable is updated
+			'''
+			# FOR CHECKING IF ELSE AND SWITCH CASE BLOCKS 
+			#checks if symbolTable is updated with the correct block info
 			for token in self.symbolTable :
-				print(str(token.statementId) + " " + str(token.tok) + " " + str(token.value))
-			#UPDATES SYMBOL TABLE GUI
-			self.update_symbolTable(self.symbolTable)
+				print( str(token.statementId) + " " + str(token.tok) + " " + str(token.block))
+			'''
+
+			if self.syntax.error == False: #if syntax analysis has no error continue semantic analysis
+				#SEMANTIC ANALYSIS
+				self.sem = Semantic_Analyzer(self.symbolTable,self.syntax.parsetree,self)
+
+				#UPDATES SYMBOL TABLE GUI
+				self.update_symbolTable(self.symbolTable)
+
+
+	###################################################
 
 	#populate the lexeme table with identified lexemes
 	def fill_lexTable(self, lexemes):
@@ -1498,6 +1530,7 @@ class Interpreter():
 		for i in range(len(self.symbolTable)):
 			self.symbolTableGUI.insert(parent='', index='end', iid=i, text="", values=(self.symbolTable[i].tok, self.symbolTable[i].value))
 
+	#Prints the values , errors and shows gimmeh when called to the GUI console
 	def update_exec(self, outputlist, operation ):
 		if operation == "<PRINT>":
 			for cont in self.execScreen.winfo_children():
@@ -1514,6 +1547,7 @@ class Interpreter():
 			self.gimmehEntry = Entry(self.execScreen, textvariable =self.inString).grid(row = len(outputlist), column = 0, sticky = "w" )
 			self.gimmehButton = Button(self.execScreen, text = "Enter input", command = lambda: self.get_input(outputlist)).grid(row = len(outputlist), column = 1, sticky = "w" )
 
+	#when gimmeh input button is clicked, semantic analysis is resumed
 	def get_input(self, outputlist):
 		self.gimmehInput = self.inString.get()
 		outputlist.append(self.gimmehInput)
@@ -1521,12 +1555,21 @@ class Interpreter():
 			cont.destroy()
 		for i in range(len(outputlist)):
 			Label(self.execScreen,bg = "light gray", text = outputlist[i]).grid(row = i, column = 0, sticky = "w")
-		print(self.sem.output)
 		self.sem.continueInput()				#continue where left of in semantic analysis
 
 	def read_file(self, filename):
 		#Every new read clear contents of previous widgets
-		#Note: di pa nagagawa ito ^^ though di pa naman priority
+		for cont in self.codeBox.winfo_children():
+			cont.destroy()
+		for i in self.lexemeTableGUI.get_children():
+			self.lexemeTableGUI.delete(i)
+		for i in self.symbolTableGUI.get_children():
+			self.symbolTableGUI.delete(i)
+		for cont in self.execScreen.winfo_children():
+			cont.destroy()
+		self.line_num = 1
+		self.error = False
+		#STARTS reading content of file
 		fh = open(filename ,"r") #read contents of input file
 		cont = fh.read() #read whole file into one string named cont
 		self.codeText = Text(self.codeBox, width = 60, height = 30, bg = "pink", yscrollcommand = self.codeScroll.set)
@@ -1575,8 +1618,8 @@ class Interpreter():
             ('Assignment', r'R'),
             ('Op_Sep', r'AN'),
             ('Identifier', r'[a-zA-Z]\w*'),     # IDENTIFIERS
-            ('Float_Constant', r'\d(\d)*\.\d(\d)*'),   # FLOAT
-            ('Integer_Constant', r'\d(\d)*,?'),          # INT
+            ('Float_Constant', r'-?\d(\d)*\.\d(\d)*'),   # FLOAT
+            ('Integer_Constant', r'-?\d(\d)*'),          # INT
             ('Newline', r'\n'),         # NEW LINE
             ('Skip', r'[ \t]+'),        # SPACE and TABS
             ('Error', r'.'),         # ANOTHER CHARACTER
@@ -1613,12 +1656,19 @@ class Interpreter():
 			elif token_type == 'Skip':			#skips spaces
 			    continue
 			elif token_type == 'Error':			#shows error
-				raise RuntimeError('%r unexpected on line %d' % (token_lexeme, self.line_num))
+				print("MALIII")
+				self.callError('%r unexpected on line %d' % (token_lexeme, self.line_num))
 			else:								#when the token is not one of the special cases, add it to actual list of tokens
 				col = m.start() - line_start
 				tokens.append(Token(token_lexeme, token_type, self.line_num, col, len(tokens) + 1))
 
 		return tokens    #returns list of tokens
+
+	def callError(self, text):
+		output = []
+		output.append(text)
+		self.update_exec(output, "<PRINT>")
+		self.error = True
 
 #main function for flexibility in case kailanganin
 def main():

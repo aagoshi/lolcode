@@ -1,11 +1,11 @@
 BTW for switch
 HAI
-  IT R  18
+  IT R 18
   WTF?
     OMG 1
       VISIBLE "I'm the only oneeeee"
       GTFO
-    OMG WIN
+    OMG 3
       VISIBLE "third time's a charm"
     OMG 5
       VISIBLE "no one wants a five"

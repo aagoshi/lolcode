@@ -7,7 +7,6 @@ HAI
   VISIBLE 1.7
   VISIBLE WIN
 
-
   BTW infinite arity printing (concat)
   VISIBLE "hi, I'm pi. My value is " 3.14
   VISIBLE "brrr " "baaa " "fa la la," " la la"
@@ -23,6 +22,5 @@ HAI
   GIMMEH input
   VISIBLE input
   VISIBLE "u gif meh " input "!"
-
 
 KTHXBYE

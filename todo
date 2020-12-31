@@ -69,11 +69,11 @@ TO DO
 (/) Errors
 
 reminder
-[] fix MKAY
-[] Di nachecheck BOTH OF and other laman ng compounds
-[] checking of format of comparison
-[] check if float != int clean compare fxn
-[] check if int and float constant support (-) digit
+[/] fix MKAY
+[/] Di nachecheck BOTH OF and other laman ng compounds
+[/] checking of format of comparison
+[/] check if float != int clean compare fxn
+[/] check if int and float constant support (-) digit
 
 question
 [/] pwede ba string literal sa arithmetic
@@ -82,6 +82,55 @@ question
 Errors
 [] Unbound variables
 
-2] dito sabi na Numbr at Numbar lang pwede else mageerror, pero sa sample may nakalagay na string type. bale pwede rin bang string as long as numbers din sila? 
+TEST CASES
+[/] arithop.lol
+	-parsing errors
+	-line 25 , line 564, pop from empty list
+		-SUM OF PRODUKT OF 3 AN 5 AN BIGGR OF DIFF OF 17 AN 2 AN 5
+		-DIFF OF Nahihiwalay ng statement
+	- line 27 invalid expression
+		- BIGGR OF PRODUKT OF 11 AN 2 AN QUOSHUNT OF SUM OF 3 AN 5 AN 2
+		- SUM OF 3 AN 5 nahihiwalay
+	-line 38 syntax error
+		- Assignment operator expected
+		- BIGGR OF SUM OF var2 AN var1 AN PRODUKT OF var1 AN var2
+		-nageend sa PRODUKT OF
+	-invalid arith exp on line 38
 
-BOTH SAEM 1.0 AN 1
+[/] assignop.lol
+[] boolop.lol
+	/- syntax: invalid if walang MKAY line 14 and 16
+	/- compound expressions
+	/- BOTH OF (NOT WIN) AN (NOT WIN)  -syntax error identifier expected
+	/- EITHER OF NOT WIN AN WIN
+	/- WON OF (BOTH OF WIN AN WIN) AN (EITHER OF WIN AN FAIL)
+	- ALL OF (WIN AN (BOTH OF WIN AN NOT FAIL)) AN (WIN AN (WON OF WIN AN (NOT WIN))) MKAY
+	[/] fix syntax - MKAY, tsaka identifier error
+	[/] fix PEMDAS
+
+[/] compop.lol
+	/- syntax: kailangan match x and x
+		-DIFFRINT 2 AN BIGGR OF 1 AN 2
+	- compound expressions  
+	/- DIFFRINT (BIGGR OF 1 AN 2) AN (SMALLR OF 3 AN 2)
+		-expression
+	/- DIFFRINT (BOTH SAEM 1 AN 2) AN (DIFFRINT 1 AN 2)
+	/- DIFFRINT (BOTH SAEM var1 AN var2) AN (DIFFRINT var1 AN var1)
+
+[/] ifelse.lol
+	/- comparison - expression
+	/- BOTH SAEM 18 AN (SUM OF 12 AN b)
+[/] switch.lol
+	-  VISIBLE "7 8 " SUM OF IT AN 2 - INVALID arithmetic expression
+		- mali add
+	- di nagmomove past 2nd line 13,17, OMGWTF
+	- string nagmamatch sa integer dapat hindi /
+	- WIN FAIL di nagmamatch kasi true or false ang value /
+	- di nagmamatch pagisang OMG lang 
+	-line 741 pag OMG lang dapat syntax error
+[/] io.lol
+	- SUM OF 2 AN PRODUKT OF 3 AN 5
+
+[/] vardecinit.lol
+	- QUOSHUNT OF 144 AN SUM OF 3 AN 9
+	/-var7-11 di nalalagay input
